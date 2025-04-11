@@ -26,7 +26,14 @@ const valids: ValidTestCase[] = [
   'new Foo(\na,\nb\n)',
   'function foo<T = {\na: 1,\nb: 2\n}>(a, b) {}',
   'foo(() =>\nbar())',
-  'foo(() =>\nbar()\n)',
+  {
+    code: $`
+      foo(
+      () =>
+      bar()
+      )
+    `,
+  },
   `call<{\nfoo: 'bar'\n}>('')`,
   $`
     (Object.keys(options) as KeysOptions[])
@@ -39,7 +46,7 @@ const valids: ValidTestCase[] = [
   `function fn({ foo, bar }: {\nfoo: 'foo'\nbar: 'bar'\n}) {}`,
   {
     code: 'foo(\na, b\n)',
-    options: [{ CallExpression: false }],
+    options: ['consistent', { CallExpression: false }],
   },
   // https://github.com/antfu/eslint-plugin-antfu/issues/14
   {
@@ -218,6 +225,16 @@ const valids: ValidTestCase[] = [
       parser: jsoncParser,
     },
   },
+  {
+    code: $`
+      interface Foo {
+      a: 1,
+      b: 2,
+      c: 3,
+      }
+    `,
+    options: ['never', { TSInterfaceDeclaration: false }],
+  },
 ]
 
 // Check snapshot for fixed code
@@ -233,7 +250,64 @@ const invalid: InvalidTestCase[] = [
   'const foo = (\na, b) => {}',
   'const foo = (\na, b): {\na:b} => {}',
   'const foo = (\na, b): {a:b} => {}',
+  {
+    code: $`
+      const foo = (
+      a, b): {
+      a:b} => {}
+    `,
+    output: o => expect(o)
+      .toMatchInlineSnapshot(`
+        "const foo = (a, b): {a:b} => {}"
+      `),
+    options: ['never'],
+  },
+  {
+    code: $`
+      const foo = (
+      a, b): {
+      a:b} => {}
+    `,
+    output: o => expect(o)
+      .toMatchInlineSnapshot(`
+        "const foo = (
+        a, 
+        b
+        ): {
+        a:b
+        } => {}"
+      `),
+    options: ['always'],
+  },
   'interface Foo {\na: 1,b: 2\n}',
+  {
+    code: $`
+      interface Foo {
+      a: 1;
+      b: 2,
+      c: 3
+      }
+    `,
+    output: o => expect(o)
+      .toMatchInlineSnapshot(`"interface Foo {a: 1;b: 2,c: 3,}"`),
+    options: ['never'],
+  },
+  {
+    code: $`
+      interface Foo {a: 1;
+      b: 2,
+      c: 3}
+    `,
+    output: o => expect(o)
+      .toMatchInlineSnapshot(`
+        "interface Foo {
+        a: 1;
+        b: 2,
+        c: 3
+        }"
+      `),
+    options: ['always'],
+  },
   {
     description: 'Add delimiter to avoid syntax error, (interface)',
     code: 'interface Foo {a: 1\nb: 2\n}',
@@ -264,7 +338,22 @@ const invalid: InvalidTestCase[] = [
     output: o => expect(o)
       .toMatchInlineSnapshot(`"type Foo = {a: 1,b: 2,}"`),
   },
-  'type Foo = [1,2,\n3]',
+  {
+    code: 'type Foo = [1,2,\n3]',
+    output: o => expect(o)
+      .toMatchInlineSnapshot(`"type Foo = [1,2,3]"`),
+  },
+  {
+    code: 'type Foo = [1,2,\n3]',
+    output: o => expect(o)
+      .toMatchInlineSnapshot(`"type Foo = [\n1,\n2,\n3\n]"`),
+    options: ['always'],
+  },
+  {
+    code: 'type Foo = [\n1,2,3]',
+    output: o => expect(o)
+      .toMatchInlineSnapshot(`"type Foo = [\n1,\n2,\n3\n]"`),
+  },
   'new Foo(1,2,\n3)',
   'new Foo(\n1,2,\n3)',
   'foo(\n()=>bar(),\n()=>\nbaz())',
@@ -396,6 +485,69 @@ const invalid: InvalidTestCase[] = [
       },
     },
   },
+  {
+    code: $`
+      function Foo() {
+        return (
+          <div 
+            className="text-white" onClick="bar"
+            style={{ color: 'red' }}
+          >
+            hi
+          </div>
+        );
+      }
+    `,
+    output: o => expect(o).toMatchInlineSnapshot(`
+      "function Foo() {
+        return (
+          <div       className="text-white" onClick="bar"      style={{ color: 'red' }}    >
+            hi
+          </div>
+        );
+      }"
+    `),
+    parserOptions: {
+      ecmaFeatures: {
+        jsx: true,
+      },
+    },
+    options: ['never'],
+  },
+  {
+    code: $`
+      function Foo() {
+        return (
+          <div className="text-white" onClick="bar"
+            style={{ color: 'red' }}
+          >
+            hi
+          </div>
+        );
+      }
+    `,
+    output: o => expect(o).toMatchInlineSnapshot(`
+      "function Foo() {
+        return (
+          <div 
+      className="text-white" 
+      onClick="bar"
+            style={{ 
+      color: 'red'
+       }}
+          >
+            hi
+          </div>
+        );
+      }"
+    `),
+    parserOptions: {
+      ecmaFeatures: {
+        jsx: true,
+      },
+    },
+    options: ['always'],
+  },
   // https://github.com/antfu/eslint-plugin-antfu/issues/18
   {
     code: $`
@@ -421,6 +573,56 @@ const invalid: InvalidTestCase[] = [
         // hello
       )"
     `),
+  },
+  {
+    code: $`
+      export default antfu({
+      },
+      // some comment
+      {
+        foo: 'bar'
+      },{
+      }
+        // hello
+      )
+    `,
+    output: o => expect(o).toMatchInlineSnapshot(`
+      "export default antfu(
+      {
+      },
+      // some comment
+      {
+        foo: 'bar'
+      },
+      {
+      }
+        // hello
+      )"
+    `),
+    options: ['always'],
+  },
+  {
+    code: $`
+      export default antfu({
+      },
+      // some comment
+      {
+        foo: 'bar'
+      },{
+      }
+        // hello
+      )
+    `,
+    output: o => expect(o).toMatchInlineSnapshot(`
+      "export default antfu({
+      },
+      // some comment
+      {  foo: 'bar'},{
+      }
+        // hello
+      )"
+    `),
+    options: ['never'],
   },
   {
     code: $`
@@ -518,6 +720,41 @@ const invalid: InvalidTestCase[] = [
         "bar": ["1",  "2"]
       }"
     `),
+  },
+  {
+    code: $`
+      {
+        "foo": {"a": "1",
+         "b": "2"}
+      }
+    `,
+    languageOptions: {
+      parser: jsoncParser,
+    },
+    output: o => expect(o).toMatchInlineSnapshot(`
+      "{  "foo": {"a": "1",   "b": "2"}}"
+    `),
+    options: ['never'],
+  },
+  {
+    code: $`
+      {
+        "foo": {"a": "1",
+         "b": "2"}
+      }
+    `,
+    languageOptions: {
+      parser: jsoncParser,
+    },
+    output: o => expect(o).toMatchInlineSnapshot(`
+      "{
+        "foo": {
+      "a": "1",
+         "b": "2"
+      }
+      }"
+    `),
+    options: ['always'],
   },
   {
     description: 'Check for function arguments in type',
@@ -651,6 +888,112 @@ const invalid: InvalidTestCase[] = [
       ){}"
     `),
   },
+  {
+    code: $`
+      function foo(a
+      ){}
+    `,
+    output: o => expect(o).toMatchInlineSnapshot(`
+      "function foo(a){}"
+    `),
+    options: ['never'],
+  },
+  {
+    code: $`
+      function foo(a){}
+    `,
+    output: o => expect(o).toMatchInlineSnapshot(`
+      "function foo(
+      a
+      ){}"
+    `),
+    options: ['always'],
+  },
+  {
+    description: 'Check for function arguments in type',
+    code: $`
+      const a = [
+        (1),
+        (2)
+      ];
+    `,
+    output: o => expect(o).toMatchInlineSnapshot(`
+      "const a = [  (1),  (2)];"
+    `),
+    options: ['never'],
+  },
+  {
+    code: $`
+      const a = [
+        1,2
+      ];
+    `,
+    output: o => expect(o).toMatchInlineSnapshot(`
+      "const a = [
+        1,
+      2
+      ];"
+    `),
+    options: ['always'],
+  },
+  {
+    code: $`
+      const a = [
+        1,2
+      ];
+    `,
+    output: o => expect(o).toMatchInlineSnapshot(`
+      "const a = [  1,2];"
+    `),
+    options: ['never'],
+  },
+  {
+    code: $`
+      import Icon, {
+        MailOutlined,
+        NumberOutlined,
+        QuestionCircleOutlined,
+        QuestionOutlined,
+        UserOutlined,
+      } from '@ant-design/icons';
+    `,
+    output: o => expect(o).toMatchInlineSnapshot(`
+      "import Icon, {  MailOutlined,  NumberOutlined,  QuestionCircleOutlined,  QuestionOutlined,  UserOutlined,} from '@ant-design/icons';"
+    `),
+    options: ['never'],
+  },
+  {
+    code: $`
+      import Icon, {
+        MailOutlined,NumberOutlined,QuestionCircleOutlined,
+        QuestionOutlined,
+        UserOutlined,
+      } from '@ant-design/icons';
+    `,
+    output: o => expect(o).toMatchInlineSnapshot(`
+      "import Icon, {
+        MailOutlined,
+      NumberOutlined,
+      QuestionCircleOutlined,
+        QuestionOutlined,
+        UserOutlined,
+      } from '@ant-design/icons';"
+    `),
+    options: ['always'],
+  },
+  {
+    code: $`
+      const todo = ([, params]) => getToDoList(params)
+    `,
+    output: o => expect(o).toMatchInlineSnapshot(`
+      "const todo = ([, 
+      params
+      ]) => getToDoList(
+      params
+      )"
+    `),
+    options: ['always'],
+  },
 ]
 
 run({
@@ -664,6 +1007,5 @@ run({
           code: i,
           output: o => expect(o).toMatchSnapshot(),
         }
-      : i,
-  ),
+      : i),
 })

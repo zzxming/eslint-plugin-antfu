@@ -1,31 +1,34 @@
-import type { AST_NODE_TYPES, TSESTree } from '@typescript-eslint/utils'
+import type { TSESTree } from '@typescript-eslint/utils'
 import type { RuleFix, RuleFixer, RuleListener } from '@typescript-eslint/utils/ts-eslint'
 import { createEslintRule } from '../utils'
 
 export const RULE_NAME = 'consistent-list-newline'
 export type MessageIds = 'shouldWrap' | 'shouldNotWrap'
-export type Options = [{
-  ArrayExpression?: boolean
-  ArrayPattern?: boolean
-  ArrowFunctionExpression?: boolean
-  CallExpression?: boolean
-  ExportNamedDeclaration?: boolean
-  FunctionDeclaration?: boolean
-  FunctionExpression?: boolean
-  ImportDeclaration?: boolean
-  JSONArrayExpression?: boolean
-  JSONObjectExpression?: boolean
-  JSXOpeningElement?: boolean
-  NewExpression?: boolean
-  ObjectExpression?: boolean
-  ObjectPattern?: boolean
-  TSFunctionType?: boolean
-  TSInterfaceDeclaration?: boolean
-  TSTupleType?: boolean
-  TSTypeLiteral?: boolean
-  TSTypeParameterDeclaration?: boolean
-  TSTypeParameterInstantiation?: boolean
-}]
+export type Options = [
+  'always' | 'never' | 'consistent',
+  {
+    ArrayExpression?: boolean
+    ArrayPattern?: boolean
+    ArrowFunctionExpression?: boolean
+    CallExpression?: boolean
+    ExportNamedDeclaration?: boolean
+    FunctionDeclaration?: boolean
+    FunctionExpression?: boolean
+    ImportDeclaration?: boolean
+    JSONArrayExpression?: boolean
+    JSONObjectExpression?: boolean
+    JSXOpeningElement?: boolean
+    NewExpression?: boolean
+    ObjectExpression?: boolean
+    ObjectPattern?: boolean
+    TSFunctionType?: boolean
+    TSInterfaceDeclaration?: boolean
+    TSTupleType?: boolean
+    TSTypeLiteral?: boolean
+    TSTypeParameterDeclaration?: boolean
+    TSTypeParameterInstantiation?: boolean
+  },
+]
 
 export default createEslintRule<Options, MessageIds>({
   name: RULE_NAME,
@@ -35,48 +38,50 @@ export default createEslintRule<Options, MessageIds>({
       description: 'Having line breaks styles to object, array and named imports',
     },
     fixable: 'whitespace',
-    schema: [{
-      type: 'object',
-      properties: {
-        ArrayExpression: { type: 'boolean' },
-        ArrayPattern: { type: 'boolean' },
-        ArrowFunctionExpression: { type: 'boolean' },
-        CallExpression: { type: 'boolean' },
-        ExportNamedDeclaration: { type: 'boolean' },
-        FunctionDeclaration: { type: 'boolean' },
-        FunctionExpression: { type: 'boolean' },
-        ImportDeclaration: { type: 'boolean' },
-        JSONArrayExpression: { type: 'boolean' },
-        JSONObjectExpression: { type: 'boolean' },
-        JSXOpeningElement: { type: 'boolean' },
-        NewExpression: { type: 'boolean' },
-        ObjectExpression: { type: 'boolean' },
-        ObjectPattern: { type: 'boolean' },
-        TSFunctionType: { type: 'boolean' },
-        TSInterfaceDeclaration: { type: 'boolean' },
-        TSTupleType: { type: 'boolean' },
-        TSTypeLiteral: { type: 'boolean' },
-        TSTypeParameterDeclaration: { type: 'boolean' },
-        TSTypeParameterInstantiation: { type: 'boolean' },
-      } satisfies Record<keyof Options[0], { type: 'boolean' }>,
-      additionalProperties: false,
-    }],
+    schema: [
+      {
+        type: 'string',
+        enum: ['always', 'never', 'consistent'],
+      },
+      {
+        type: 'object',
+        properties: {
+          ArrayExpression: { type: 'boolean' },
+          ArrayPattern: { type: 'boolean' },
+          ArrowFunctionExpression: { type: 'boolean' },
+          CallExpression: { type: 'boolean' },
+          ExportNamedDeclaration: { type: 'boolean' },
+          FunctionDeclaration: { type: 'boolean' },
+          FunctionExpression: { type: 'boolean' },
+          ImportDeclaration: { type: 'boolean' },
+          JSONArrayExpression: { type: 'boolean' },
+          JSONObjectExpression: { type: 'boolean' },
+          JSXOpeningElement: { type: 'boolean' },
+          NewExpression: { type: 'boolean' },
+          ObjectExpression: { type: 'boolean' },
+          ObjectPattern: { type: 'boolean' },
+          TSFunctionType: { type: 'boolean' },
+          TSInterfaceDeclaration: { type: 'boolean' },
+          TSTupleType: { type: 'boolean' },
+          TSTypeLiteral: { type: 'boolean' },
+          TSTypeParameterDeclaration: { type: 'boolean' },
+          TSTypeParameterInstantiation: { type: 'boolean' },
+        },
+        additionalProperties: false,
+      },
+    ],
     messages: {
       shouldWrap: 'Should have line breaks between items, in node {{name}}',
       shouldNotWrap: 'Should not have line breaks between items, in node {{name}}',
     },
   },
-  defaultOptions: [{}],
-  create: (context, [options = {}] = [{}]) => {
-    const multilineNodes = new Set([
-      'ArrayExpression',
-      'FunctionDeclaration',
-      'ObjectExpression',
-      'ObjectPattern',
-      'TSTypeLiteral',
-      'TSTupleType',
-      'TSInterfaceDeclaration',
-    ])
+  defaultOptions: ['consistent', {}],
+  create: (context, options) => {
+    const [
+      newlineMode = 'consistent',
+      astNode = {},
+    ] = options
+
     function removeLines(fixer: RuleFixer, start: number, end: number, delimiter?: string): RuleFix {
       const range = [start, end] as const
       const code = context.sourceCode.text.slice(...range)
@@ -131,13 +136,15 @@ export default createEslintRule<Options, MessageIds>({
       if (startToken?.type !== 'Punctuator')
         startToken = context.sourceCode.getTokenBefore(items[0])
 
-      const endToken = context.sourceCode.getTokenAfter(items[items.length - 1])
       const startLine = startToken!.loc.start.line
 
-      if (startToken!.loc.start.line === endToken!.loc.end.line)
-        return
+      let mode: 'inline' | 'newline' | null
+        = newlineMode === 'always'
+          ? 'newline'
+          : newlineMode === 'never'
+            ? 'inline'
+            : null
 
-      let mode: 'inline' | 'newline' | null = null
       let lastLine = startLine
 
       items.forEach((item, idx) => {
@@ -162,7 +169,7 @@ export default createEslintRule<Options, MessageIds>({
           })
         }
         else if (mode === 'inline' && currentStart !== lastLine) {
-          const lastItem = items[idx - 1]
+          const lastItem = (idx !== 0 ? items[idx - 1] : startToken) as TSESTree.Node
           if (context.sourceCode.getCommentsBefore(item).length > 0)
             return
           const content = context.sourceCode.text.slice(lastItem!.range[1], item.range[0])
@@ -174,7 +181,8 @@ export default createEslintRule<Options, MessageIds>({
                 name: node.type,
               },
               * fix(fixer) {
-                yield removeLines(fixer, lastItem!.range[1], item.range[0], getDelimiter(node, lastItem))
+                const delimiter = idx === 0 ? '' : getDelimiter(node, lastItem)
+                yield removeLines(fixer, lastItem!.range[1], item.range[0], delimiter)
               },
             })
           }
@@ -205,9 +213,6 @@ export default createEslintRule<Options, MessageIds>({
         })
       }
       else if (mode === 'inline' && endLoc.line !== lastLine) {
-        // If there is only one multiline item, we allow the closing bracket to be on the a different line
-        if (items.length === 1 && !(multilineNodes as Set<AST_NODE_TYPES>).has(node.type))
-          return
         if (context.sourceCode.getCommentsAfter(lastItem).length > 0)
           return
 
@@ -319,15 +324,15 @@ export default createEslintRule<Options, MessageIds>({
     } satisfies RuleListener
 
     type KeysListener = keyof typeof listenser
-    type KeysOptions = keyof Options[0]
+    type KeysOptions = keyof Options[1]
 
     // Type assertion to check if all keys are exported
     exportType<KeysListener, KeysOptions>()
     exportType<KeysOptions, KeysListener>()
 
-    ;(Object.keys(options) as KeysOptions[])
+    ;(Object.keys(astNode) as KeysOptions[])
       .forEach((key) => {
-        if (options[key] === false)
+        if (astNode[key] === false)
           delete listenser[key]
       })
 

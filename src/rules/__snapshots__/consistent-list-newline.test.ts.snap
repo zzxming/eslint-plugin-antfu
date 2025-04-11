@@ -79,7 +79,7 @@ b
 ): {a:b} => {}"
 `;
 
-exports[`consistent-list-newline > invalid > Invalid #11: interface Foo {
+exports[`consistent-list-newline > invalid > Invalid #13: interface Foo {
 a: 1,b: 2
 } 1`] = `
 "interface Foo {
@@ -88,7 +88,7 @@ b: 2
 }"
 `;
 
-exports[`consistent-list-newline > invalid > Invalid #15: type Foo = {
+exports[`consistent-list-newline > invalid > Invalid #19: type Foo = {
 a: 1,b: 2
 } 1`] = `
 "type Foo = {
@@ -97,13 +97,10 @@ b: 2
 }"
 `;
 
-exports[`consistent-list-newline > invalid > Invalid #17: type Foo = [1,2,
-3] 1`] = `"type Foo = [1,2,3]"`;
-
-exports[`consistent-list-newline > invalid > Invalid #18: new Foo(1,2,
+exports[`consistent-list-newline > invalid > Invalid #24: new Foo(1,2,
 3) 1`] = `"new Foo(1,2,3)"`;
 
-exports[`consistent-list-newline > invalid > Invalid #19: new Foo(
+exports[`consistent-list-newline > invalid > Invalid #25: new Foo(
 1,2,
 3) 1`] = `
 "new Foo(
@@ -113,7 +110,7 @@ exports[`consistent-list-newline > invalid > Invalid #19: new Foo(
 )"
 `;
 
-exports[`consistent-list-newline > invalid > Invalid #20: foo(
+exports[`consistent-list-newline > invalid > Invalid #26: foo(
 ()=>bar(),
 ()=>
 baz()) 1`] = `
@@ -124,17 +121,17 @@ baz()
 )"
 `;
 
-exports[`consistent-list-newline > invalid > Invalid #21: foo(()=>bar(),
+exports[`consistent-list-newline > invalid > Invalid #27: foo(()=>bar(),
 ()=>
 baz()) 1`] = `
 "foo(()=>bar(),()=>
 baz())"
 `;
 
-exports[`consistent-list-newline > invalid > Invalid #22: foo<X,
+exports[`consistent-list-newline > invalid > Invalid #28: foo<X,
 Y>(1, 2) 1`] = `"foo<X,Y>(1, 2)"`;
 
-exports[`consistent-list-newline > invalid > Invalid #23: foo<
+exports[`consistent-list-newline > invalid > Invalid #29: foo<
 X,Y>(
 1, 2) 1`] = `
 "foo<
@@ -146,7 +143,7 @@ Y
 )"
 `;
 
-exports[`consistent-list-newline > invalid > Invalid #24: function foo<
+exports[`consistent-list-newline > invalid > Invalid #30: function foo<
 X,Y>() {} 1`] = `
 "function foo<
 X,
@@ -154,11 +151,11 @@ Y
 >() {}"
 `;
 
-exports[`consistent-list-newline > invalid > Invalid #25: const {a,
+exports[`consistent-list-newline > invalid > Invalid #31: const {a,
 b
 } = c 1`] = `"const {a,b} = c"`;
 
-exports[`consistent-list-newline > invalid > Invalid #26: const [
+exports[`consistent-list-newline > invalid > Invalid #32: const [
 a,b] = c 1`] = `
 "const [
 a,
@@ -166,7 +163,7 @@ b
 ] = c"
 `;
 
-exports[`consistent-list-newline > invalid > Invalid #27: foo(([
+exports[`consistent-list-newline > invalid > Invalid #33: foo(([
 a,b]) => {}) 1`] = `
 "foo(([
 a,
